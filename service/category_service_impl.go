@@ -7,18 +7,28 @@ import (
 	"ganasa18/belajar-golang-restful-api/model/domain"
 	"ganasa18/belajar-golang-restful-api/model/web"
 	"ganasa18/belajar-golang-restful-api/repository"
+
+	"github.com/go-playground/validator"
 )
 
 type CategoryServiceImpl struct {
 	CategoryRepository repository.CategoryRepository
 	DB                 *sql.DB
+	Validate           *validator.Validate
 }
 
 func (service *CategoryServiceImpl) Create(ctx context.Context, request web.CategoryCreateRequest) web.CategoryResponse {
+	// VALIDATE
+	err := service.Validate.Struct(request)
+	helper.PanicIfError(err)
+
+	// TRANSACTION BEGIN
 	tx, err := service.DB.Begin()
 	helper.PanicIfError(err)
+	// CHECK TRANSACTION
 	defer helper.CommitOrRollback(tx)
 
+	// LOGIC
 	category := domain.Category{
 		Name: request.Name,
 	}
@@ -28,14 +38,20 @@ func (service *CategoryServiceImpl) Create(ctx context.Context, request web.Cate
 }
 
 func (service *CategoryServiceImpl) Update(ctx context.Context, request web.CategoryUpdateRequest) web.CategoryResponse {
+	// VALIDATE
+	err := service.Validate.Struct(request)
+	helper.PanicIfError(err)
+
 	tx, err := service.DB.Begin()
 	helper.PanicIfError(err)
+	// CHECK TRANSACTION
 	defer helper.CommitOrRollback(tx)
-
+	// CHECK IF CATEGORY EXIST
 	category, err := service.CategoryRepository.FindById(ctx, tx, request.Id)
 	helper.PanicIfError(err)
-	category.Name = request.Name
 
+	// LOGIC
+	category.Name = request.Name
 	category = service.CategoryRepository.Update(ctx, tx, category)
 
 	return helper.ToCategoryResponse(category)
@@ -44,29 +60,35 @@ func (service *CategoryServiceImpl) Update(ctx context.Context, request web.Cate
 func (service *CategoryServiceImpl) Delete(ctx context.Context, categoryId int) {
 	tx, err := service.DB.Begin()
 	helper.PanicIfError(err)
+	// CHECK TRANSACTION
 	defer helper.CommitOrRollback(tx)
 
+	// CHECK IF CATEGORY EXIST
 	category, err := service.CategoryRepository.FindById(ctx, tx, categoryId)
 	helper.PanicIfError(err)
 
+	// LOGIC
 	service.CategoryRepository.Delete(ctx, tx, category)
 }
 
 func (service *CategoryServiceImpl) FindById(ctx context.Context, categoryId int) web.CategoryResponse {
 	tx, err := service.DB.Begin()
 	helper.PanicIfError(err)
+	// CHECK TRANSACTION
 	defer helper.CommitOrRollback(tx)
 
 	category, err := service.CategoryRepository.FindById(ctx, tx, categoryId)
 	helper.PanicIfError(err)
+	// LOGIC
 	return helper.ToCategoryResponse(category)
 }
 
 func (service *CategoryServiceImpl) FindAll(ctx context.Context) []web.CategoryResponse {
 	tx, err := service.DB.Begin()
 	helper.PanicIfError(err)
+	// CHECK TRANSACTION
 	defer helper.CommitOrRollback(tx)
-
+	// LOGIC
 	categories := service.CategoryRepository.FindAll(ctx, tx)
 	return helper.ToCategoryResponses(categories)
 }
