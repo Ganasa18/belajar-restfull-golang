@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"ganasa18/belajar-golang-restful-api/exception"
 	"ganasa18/belajar-golang-restful-api/helper"
 	"ganasa18/belajar-golang-restful-api/model/domain"
 	"ganasa18/belajar-golang-restful-api/model/web"
@@ -15,6 +16,14 @@ type CategoryServiceImpl struct {
 	CategoryRepository repository.CategoryRepository
 	DB                 *sql.DB
 	Validate           *validator.Validate
+}
+
+func NewCategoryService(categoryRepository repository.CategoryRepository, DB *sql.DB, validate *validator.Validate) CategoryService {
+	return &CategoryServiceImpl{
+		CategoryRepository: categoryRepository,
+		DB:                 DB,
+		Validate:           validate,
+	}
 }
 
 func (service *CategoryServiceImpl) Create(ctx context.Context, request web.CategoryCreateRequest) web.CategoryResponse {
@@ -48,7 +57,9 @@ func (service *CategoryServiceImpl) Update(ctx context.Context, request web.Cate
 	defer helper.CommitOrRollback(tx)
 	// CHECK IF CATEGORY EXIST
 	category, err := service.CategoryRepository.FindById(ctx, tx, request.Id)
-	helper.PanicIfError(err)
+	if err != nil {
+		panic(exception.NewNotFoundError(err.Error()))
+	}
 
 	// LOGIC
 	category.Name = request.Name
@@ -65,7 +76,9 @@ func (service *CategoryServiceImpl) Delete(ctx context.Context, categoryId int) 
 
 	// CHECK IF CATEGORY EXIST
 	category, err := service.CategoryRepository.FindById(ctx, tx, categoryId)
-	helper.PanicIfError(err)
+	if err != nil {
+		panic(exception.NewNotFoundError(err.Error()))
+	}
 
 	// LOGIC
 	service.CategoryRepository.Delete(ctx, tx, category)
@@ -78,7 +91,10 @@ func (service *CategoryServiceImpl) FindById(ctx context.Context, categoryId int
 	defer helper.CommitOrRollback(tx)
 
 	category, err := service.CategoryRepository.FindById(ctx, tx, categoryId)
-	helper.PanicIfError(err)
+	if err != nil {
+		panic(exception.NewNotFoundError(err.Error()))
+	}
+
 	// LOGIC
 	return helper.ToCategoryResponse(category)
 }
